@@ -4,26 +4,29 @@ void Main()
 {
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day7.txt");
-	var text = "3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0"; //File.ReadAllText(file);
+	var text = File.ReadAllText(file);
 
 	var maxSignal = int.MinValue;
 	var sequence = string.Empty;
 
-	for (int tenks = 4; tenks >= 0; tenks--)
+	int maxRange = 4;
+	int minRange = 0;
+	
+	for (int tenks = maxRange; tenks >= minRange; tenks--)
 	{
-		for (int ks = 4; ks >= 0; ks--)
+		for (int ks = maxRange; ks >= minRange; ks--)
 		{
 			if (ks == tenks) continue;
 
-			for (int hs = 4; hs >= 0; hs--)
+			for (int hs = maxRange; hs >= minRange; hs--)
 			{
 				if (hs == tenks || hs == ks) continue;
 
-				for (int ts = 4; ts >= 0; ts--)
+				for (int ts = maxRange; ts >= minRange; ts--)
 				{
 					if (ts == tenks || ts == ks || ts == hs) continue;
 
-					for (int us = 4; us >= 0; us--)
+					for (int us = maxRange; us >= minRange; us--)
 					{
 						if (us == tenks || us == ks || us == hs || us == ts) continue;
 												
