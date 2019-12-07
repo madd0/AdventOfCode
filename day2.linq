@@ -11,20 +11,24 @@ void Main()
 		"1,0,0,0,99",
 		"2,3,0,3,99",
 		"2,4,4,5,99,0",
-		"1,1,1,4,99,5,6,0,99",
-		text
+		"1,1,1,4,99,5,6,0,99"
 	};
 
 	foreach (var element in data)
 	{
 		Run(Parse(element));
 	}
+	
+	var challengeData = Parse(text);
+	challengeData[1] = 12;
+	challengeData[2] = 2;
+	Run(challengeData);
 }
 
 void Run(int[] memory) 
 {
 	var result = Execute(memory);
-	string.Join(",", memory.Select(i => i.ToString())).Dump($"Result: {memory[0]}");
+	string.Join(",", memory.Select(i => i.ToString())).Dump($"Result: {result}");
 }
 
 int[] Parse(string memory)
@@ -35,9 +39,32 @@ int[] Parse(string memory)
 int Execute(int[] memory)
 {
 	var start = 0;
-	var length = Math.Min(memory.Length, 4);
 	
-	
+	do
+	{
+		var instruction = memory[start];
+		
+		if (instruction == 99)
+		{
+			break;
+		}
+		
+		Func<int, int, int> operation;
+
+		if (instruction == 1)
+		{
+			operation = (a, b) => a + b;
+		}
+		else
+		{
+			operation = (a, b) => a * b;
+		}
+		
+		memory[memory[start + 3]] = operation(memory[memory[start + 1]], memory[memory[start + 2]]);
+		
+		start += 4;
+	}
+	while (start + 4 < memory.Length);
 	
 	return memory[0];
 }
