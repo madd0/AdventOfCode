@@ -10,19 +10,31 @@ void Main()
 
 //	var wire1 = challengeData[0].Split(',');
 //	var wire2 = challengeData[1].Split(',');
-	var wire1 = "R75,D30,R83,U83,L12,D49,R71,U7,L72".Split(',');
-	var wire2 = "U62,R66,U55,R34,D71,R55,D58,R83".Split(',');
+		var wire1 = "R8,U5,L5,D3".Split(',');
+		var wire2 = "U7,R6,D4,L4".Split(',');
+	//	var wire1 = "R75,D30,R83,U83,L12,D49,R71,U7,L72".Split(',');
+	//	var wire2 = "U62,R66,U55,R34,D71,R55,D58,R83".Split(',');
 
 	space.LayCable(wire1);
 	space.LayCable(wire2);
 
-	var file = Path.Combine(dir, "map.txt");
-	using (var writer = new StreamWriter(File.OpenWrite(file)))
+	if (space.Size < 1000)
 	{
-		space.Draw(writer);
+		var file = Path.Combine(dir, "map.txt");
+		using (var writer = new StreamWriter(File.Open(file, FileMode.Truncate)))
+		{
+			space.Draw(writer);
+		}
 	}
 	
 	space.ClosestIntersection().Dump();
+}
+
+struct Intersection
+{
+	public int Row { get; set; }
+	public int Col { get; set; }
+	public int Distance => Math.Abs(Row) + Math.Abs(Col);
 }
 
 class Space
@@ -32,22 +44,24 @@ class Space
 	(int min, int max) xSpaceBounds = (0, 0);
 	(int min, int max) ySpaceBounds = (0, 0);
 	
-	List<(int,int,int)> intersections = new List<(int,int,int)>();
+	List<Intersection> intersections = new List<Intersection>();
 	
 	int currentCable = 0;
+	
+	public int Size => Math.Max(Math.Abs(xSpaceBounds.min) + Math.Abs(xSpaceBounds.max), Math.Abs(ySpaceBounds.min) + Math.Abs(ySpaceBounds.max));
 	
 	public Space()
 	{
 		LayCable(0, 0, 'o', 0);
 	}
 	
-	public (int, int, int) ClosestIntersection()
+	public Intersection ClosestIntersection()
 	{
-		var intersection = (0, 0, 0);
+		var intersection = default(Intersection);
 		
 		foreach (var i in intersections)
 		{
-			if (intersection.Item3 == 0  || i.Item3 < intersection.Item3)
+			if (intersection.Distance == 0  || i.Distance < intersection.Distance)
 			{
 				intersection = i;
 			}
@@ -67,9 +81,9 @@ class Space
 		if (ySpace.TryGetValue(x, out var c))
 		{
 			v = c.Item2 == id ? '+' : 'X';
-			
+
 			if (c.Item2 != id)
-				intersections.Add((x, y, Math.Abs(x) + Math.Abs(y)));
+				intersections.Add(new Intersection { Row = y, Col = x });
 		}
 		
 		space[y][x] = (v, id);
