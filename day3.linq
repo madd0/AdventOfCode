@@ -26,8 +26,9 @@ void Main()
 			space.Draw(writer);
 		}
 	}
-	
+
 	space.ClosestIntersection().Dump();
+	space.ClosestIntersectionByWireDistance().Dump();
 }
 
 class Point
@@ -36,23 +37,29 @@ class Point
 	public int Row { get; set; }
 	public int Col { get; set; }
 	public int Distance => Math.Abs(Row) + Math.Abs(Col);
+	public int WireDistance => Wires.Sum(w => w.Value);
+	
 	public Dictionary<int,int> Wires {get; private set;} = new Dictionary<int,int>();
 	
-	public bool AddWire(int id)
+	public bool AddWire(int id, int distance)
 	{
 		var intersection = false;
-		var wireExists = Wires.Contains(id);
 		
-		Wires.Add(id);
+		var wireExists = Wires.ContainsKey(id);
+		
+		if (!wireExists)
+		{
+			Wires.Add(id, distance);
+		}
+		else
+		{
+			Char = '+';
+		}
 		
 		if (Wires.Count > 1)
 		{
 			Char = 'X';
 			intersection = true;
-		}
-		else if (wireExists)
-		{
-			Char = '+';
 		}
 		
 		return intersection;
@@ -74,25 +81,40 @@ class Space
 	
 	public Space()
 	{
-		LayCable(0, 0, 'o', 0);
+		LayCable(0, 0, 'o', 0, 0);
 	}
-	
+
 	public Point ClosestIntersection()
 	{
 		var intersection = default(Point);
-		
+
 		foreach (var i in intersections)
 		{
-			if (intersection == null  || i.Distance < intersection.Distance)
+			if (intersection == null || i.Distance < intersection.Distance)
 			{
 				intersection = i;
 			}
 		}
-		
+
 		return intersection;
 	}
 
-	void LayCable(int x, int y, char v, int id)
+	public Point ClosestIntersectionByWireDistance()
+	{
+		var intersection = default(Point);
+
+		foreach (var i in intersections)
+		{
+			if (intersection == null || i.WireDistance < intersection.WireDistance)
+			{
+				intersection = i;
+			}
+		}
+
+		return intersection;
+	}
+
+	void LayCable(int x, int y, char v, int id, int distance)
 	{
 		if (!space.TryGetValue(y, out var ySpace))
 		{
@@ -105,7 +127,7 @@ class Space
 			c = new Point { Char = v, Row = y, Col = x };
 		}
 
-		var isIntersection = c.AddWire(id);
+		var isIntersection = c.AddWire(id, distance);
 
 		if (isIntersection)
 			intersections.Add(c);
@@ -122,6 +144,7 @@ class Space
 	{
 		var currPos = new[] { 0, 0 };
 		var cableId = currentCable++;
+		var distance = 0;
 		
 		foreach (var element in wire)
 		{
@@ -140,7 +163,7 @@ class Space
 					c = '+';
 				}
 				
-				LayCable(currPos[0], currPos[1], c, cableId);
+				LayCable(currPos[0], currPos[1], c, cableId, ++distance);
 			}
 		}
 	}
