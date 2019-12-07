@@ -6,8 +6,9 @@ async Task Main()
 {
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day7.txt");
-	var text = File.ReadAllText(file);
-
+	var text = "3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0"; //File.ReadAllText(file);
+	text = "3,23,3,24,1002,24,10,24,1002,23,-1,23,101,5,23,23,1,24,23,23,4,23,99,0,0";
+	
 	var maxSignal = int.MinValue;
 	var sequence = string.Empty;
 
@@ -42,6 +43,7 @@ async Task Main()
 						ampB.Link(ampC);
 						ampC.Link(ampD);
 						ampD.Link(ampE);
+						//ampE.Link(ampA);
 
 						ampA.Run(0);
 						var signal = await ampE.Output();
@@ -63,7 +65,11 @@ async Task Main()
 
 class Program
 {
+	private int position;
+	
 	private int[] Memory { get; set; }
+	
+	public int Output { get; private set; }
 
 	public static Program Parse(string memory)
 	{
@@ -73,29 +79,29 @@ class Program
 		return p;
 	}
 
-	public int Run(int[] buffers)
+	public bool Run(int[] buffers)
 	{
 		buffers[0] = 0;
 		buffers[buffers.Length - 1] = 0;
 
-		Execute(Memory, buffers);
+		var memoryPosition = Execute(Memory, buffers);
 
-		return buffers[buffers.Length - 1];
+		this.Output = buffers[buffers.Length - 1];
+		
+		return memoryPosition == Memory.Length;
 	}
 
 	int Execute(int[] memory, int[] buffers)
 	{
-		var start = 0;
-
 		do
 		{
-			var instruction = Instruction.MakeInstruction(memory, start);
+			var instruction = Instruction.MakeInstruction(memory, position);
 
-			start = instruction.Execute(buffers);
+			position = instruction.Execute(buffers);
 		}
-		while (start < memory.Length);
+		while (position < memory.Length);
 
-		return memory[0];
+		return position;
 	}
 }
 
@@ -125,15 +131,16 @@ class Amplifier
 
 	public void Run(int signal)
 	{
-		var programResult = program.Run(new[] { 0, phase, signal, 0 });
+		var ranToEnd = program.Run(new[] { 0, phase, signal, 0 });
 
+		if (ranToEnd)
+		{
+			tcs.SetResult(program.Output);
+		}
+		
 		if (this.next != null)
 		{
-			this.next.Run(programResult);
-		}
-		else
-		{
-			tcs.SetResult(programResult);
+			this.next.Run(program.Output);
 		}
 	}
 }
