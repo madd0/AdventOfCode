@@ -14,15 +14,40 @@ E)J
 J)K
 K)L";
 	
-	var reader = new StringReader(graph);
+	TextReader reader = new StringReader(graph);
 	
 	var map = Parse(reader).Dump();
-	map.Sum(b => b.Value.Count).Dump();
+	CountOrbits(map).Dump();
+
+	reader = new StreamReader(File.OpenRead(Path.Combine(Path.GetDirectoryName(Util.CurrentQueryPath), "day6.txt")));
+	
+	map = Parse(reader);
+	CountOrbits(map).Dump();
 }
 
-Dictionary<string, List<string>> Parse(TextReader graph)
+int CountOrbits(Dictionary<string, string> map)
 {
-	var map = new Dictionary<string, List<string>>();
+	var orbits = 0;
+	
+	foreach (var element in map)
+	{
+		orbits += IndirectCount(map, element.Value);
+	}
+	
+	return orbits;
+}
+
+int IndirectCount(Dictionary<string, string> map, string value)
+{
+	return value == null ? 0 : 1 + IndirectCount(map, map[value]);
+}
+
+Dictionary<string, string> Parse(TextReader graph)
+{
+	var map = new Dictionary<string, string>
+	{
+		["COM"] = null
+	};
 	
 	string line;
 	
@@ -30,16 +55,8 @@ Dictionary<string, List<string>> Parse(TextReader graph)
 	{
 		var bodies = line.Split(')');
 		
-		if (!map.TryGetValue(bodies[0], out var orbitingBodies))
-		{
-			orbitingBodies = new List<string>();
-			map.Add(bodies[0], orbitingBodies);
-		}
-		
-		orbitingBodies.Add(bodies[1]);
+		map[bodies[1]] = bodies[0];
 	}
 	
 	return map;
 }
-
-// Define other methods and classes here
