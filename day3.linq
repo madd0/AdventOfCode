@@ -8,15 +8,19 @@ void Main()
 
 	var challengeData = File.ReadAllLines(Path.Combine(dir, "day3.txt"));
 
-	var wire1 = challengeData[0].Split(',');
-	var wire2 = challengeData[1].Split(',');
-//	var wire1 = "R75,D30,R83,U83,L12,D49,R71,U7,L72".Split(',');
-//	var wire2 = "U62,R66,U55,R34,D71,R55,D58,R83".Split(',');
+//	var wire1 = challengeData[0].Split(',');
+//	var wire2 = challengeData[1].Split(',');
+	var wire1 = "R75,D30,R83,U83,L12,D49,R71,U7,L72".Split(',');
+	var wire2 = "U62,R66,U55,R34,D71,R55,D58,R83".Split(',');
 
 	space.LayCable(wire1);
 	space.LayCable(wire2);
 
-	//File.WriteAllText(Path.Combine(dir, "map.txt"), space.Draw().Dump());
+	var file = Path.Combine(dir, "map.txt");
+	using (var writer = new StreamWriter(File.OpenWrite(file)))
+	{
+		space.Draw(writer);
+	}
 	
 	space.ClosestIntersection().Dump();
 }
@@ -103,10 +107,8 @@ class Space
 		}
 	}
 
-	public string Draw()
-	{
-		var drawing = new StringBuilder();
-		
+	public void Draw(TextWriter writer)
+	{		
 		for (var row = ySpaceBounds.max + 1; row >= ySpaceBounds.min - 1; row--)
 		{
 			for (var col = xSpaceBounds.min - 1; col <= xSpaceBounds.max + 1; col++)
@@ -123,12 +125,10 @@ class Space
 					c = ' ';
 				}
 				
-				drawing.Append(c);
+				writer.Write(c);
 			}
 			
-			drawing.AppendLine();
+			writer.WriteLine();
 		}
-
-		return drawing.ToString();
 	}
 }
