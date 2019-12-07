@@ -59,6 +59,10 @@ class Instruction
 		[2] = 3,
 		[3] = 1,
 		[4] = 1,
+		[5] = 2,
+		[6] = 2,
+		[7] = 3,
+		[8] = 3,
 		[99] = 0
 	};
 
@@ -72,22 +76,32 @@ class Instruction
 
 	public int ParameterCount => instructionParameters[Opcode];
 
-	public Action Operation
+	public Func<int> Operation
 	{
 		get
 		{
+			var next = Address + ParameterCount + 1;
+			
 			switch (Opcode)
 			{
 				case 1:
-					return () => Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] + Memory[this.GetParamAddress(1)];
+					return () => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] + Memory[this.GetParamAddress(1)]; return next; };
 				case 2:
-					return () => Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] * Memory[this.GetParamAddress(1)];
+					return () => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] * Memory[this.GetParamAddress(1)]; return next; };
 				case 3:
-					return () => Memory[this.GetParamAddress(0)] = int.Parse(Util.ReadLine());
+					return () => { Memory[this.GetParamAddress(0)] = int.Parse(Util.ReadLine()); return next; };
 				case 4:
-					return () => Memory[this.GetParamAddress(0)].Dump();
+					return () => { Memory[this.GetParamAddress(0)].Dump(); return next; };
+				case 5:
+					return () => Memory[this.GetParamAddress(0)] != 0 ? Memory[this.GetParamAddress(1)] : next;
+				case 6:
+					return () => Memory[this.GetParamAddress(0)] == 0 ? Memory[this.GetParamAddress(1)] : next;
+				case 7:
+					return () => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] < Memory[this.GetParamAddress(1)] ? 1 : 0; return next; };
+				case 8:
+					return () => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] == Memory[this.GetParamAddress(1)] ? 1 : 0; return next; };
 				default:
-					return () => { };
+					return () => next;
 			}
 		}
 	}
@@ -111,9 +125,7 @@ class Instruction
 			return this.Memory.Length;
 		}
 		
-		this.Operation();
-		
-		return Address + ParameterCount + 1;
+		return this.Operation(); 
 	}
 	
 	public static Instruction MakeInstruction(int[] memory, int address)
