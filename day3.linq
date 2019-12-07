@@ -8,10 +8,10 @@ void Main()
 
 	var challengeData = File.ReadAllLines(Path.Combine(dir, "day3.txt"));
 
-//	var wire1 = challengeData[0].Split(',');
-//	var wire2 = challengeData[1].Split(',');
-		var wire1 = "R8,U5,L5,D3".Split(',');
-		var wire2 = "U7,R6,D4,L4".Split(',');
+	var wire1 = challengeData[0].Split(',');
+	var wire2 = challengeData[1].Split(',');
+//		var wire1 = "R8,U5,L5,D3".Split(',');
+//		var wire2 = "U7,R6,D4,L4".Split(',');
 	//	var wire1 = "R75,D30,R83,U83,L12,D49,R71,U7,L72".Split(',');
 	//	var wire2 = "U62,R66,U55,R34,D71,R55,D58,R83".Split(',');
 
