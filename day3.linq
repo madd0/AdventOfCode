@@ -30,21 +30,43 @@ void Main()
 	space.ClosestIntersection().Dump();
 }
 
-struct Intersection
+class Point
 {
+	public char Char { get; set; }
 	public int Row { get; set; }
 	public int Col { get; set; }
 	public int Distance => Math.Abs(Row) + Math.Abs(Col);
+	public HashSet<int> Wires {get; private set;} = new HashSet<int>();
+	
+	public bool AddWire(int id)
+	{
+		var intersection = false;
+		var wireExists = Wires.Contains(id);
+		
+		Wires.Add(id);
+		
+		if (Wires.Count > 1)
+		{
+			Char = 'X';
+			intersection = true;
+		}
+		else if (wireExists)
+		{
+			Char = '+';
+		}
+		
+		return intersection;
+	}
 }
 
 class Space
 {
-	Dictionary<int, Dictionary<int, (char, int)>> space = new Dictionary<int, Dictionary<int, (char, int)>>();
+	Dictionary<int, Dictionary<int, Point>> space = new Dictionary<int, Dictionary<int, Point>>();
 
 	(int min, int max) xSpaceBounds = (0, 0);
 	(int min, int max) ySpaceBounds = (0, 0);
 	
-	List<Intersection> intersections = new List<Intersection>();
+	List<Point> intersections = new List<Point>();
 	
 	int currentCable = 0;
 	
@@ -55,13 +77,13 @@ class Space
 		LayCable(0, 0, 'o', 0);
 	}
 	
-	public Intersection ClosestIntersection()
+	public Point ClosestIntersection()
 	{
-		var intersection = default(Intersection);
+		var intersection = default(Point);
 		
 		foreach (var i in intersections)
 		{
-			if (intersection.Distance == 0  || i.Distance < intersection.Distance)
+			if (intersection == null  || i.Distance < intersection.Distance)
 			{
 				intersection = i;
 			}
@@ -74,19 +96,21 @@ class Space
 	{
 		if (!space.TryGetValue(y, out var ySpace))
 		{
-			ySpace = new Dictionary<int, (char, int)>();
+			ySpace = new Dictionary<int, Point>();
 			space.Add(y, ySpace);
 		}
 		
-		if (ySpace.TryGetValue(x, out var c))
+		if (!ySpace.TryGetValue(x, out var c))
 		{
-			v = c.Item2 == id ? '+' : 'X';
-
-			if (c.Item2 != id)
-				intersections.Add(new Intersection { Row = y, Col = x });
+			c = new Point { Char = v, Row = y, Col = x };
 		}
-		
-		space[y][x] = (v, id);
+
+		var isIntersection = c.AddWire(id);
+
+		if (isIntersection)
+			intersections.Add(c);
+
+		space[y][x] = c;
 		
 		xSpaceBounds.min = Math.Min(xSpaceBounds.min, x);
 		xSpaceBounds.max = Math.Max(xSpaceBounds.max, x);
@@ -132,7 +156,7 @@ class Space
 				if (space.TryGetValue(row, out var xSpace) &&
 				    xSpace.TryGetValue(col, out var box))
 				{
-					c = box.Item1;
+					c = box.Char;
 				}
 				else
 				{
