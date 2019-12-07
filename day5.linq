@@ -18,7 +18,9 @@ void Main()
 	foreach (var element in data)
 	{
 		Run(Parse(element));
-	}	
+	}
+	
+	Run(Parse(text));
 }
 
 void Run(int[] memory) 
@@ -80,6 +82,10 @@ class Instruction
 					return () => Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] + Memory[this.GetParamAddress(1)];
 				case 2:
 					return () => Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] * Memory[this.GetParamAddress(1)];
+				case 3:
+					return () => Memory[this.GetParamAddress(0)] = int.Parse(Util.ReadLine());
+				case 4:
+					return () => Memory[this.GetParamAddress(0)].Dump();
 				default:
 					return () => { };
 			}
