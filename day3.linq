@@ -14,6 +14,8 @@ void Main()
 	space.LayCable(wire2);
 
 	space.Draw();
+	
+	space.ClosestIntersection().Dump();
 }
 
 class Space
@@ -23,9 +25,26 @@ class Space
 	(int min, int max) xSpaceBounds = (0, 0);
 	(int min, int max) ySpaceBounds = (0, 0);
 	
+	List<(int,int,int)> intersections = new List<(int,int,int)>();
+	
 	public Space()
 	{
 		LayCable(0, 0, 'o');
+	}
+	
+	public (int, int, int) ClosestIntersection()
+	{
+		var intersection = (0, 0, 0);
+		
+		foreach (var i in intersections)
+		{
+			if (intersection.Item3 == 0  || i.Item3 < intersection.Item3)
+			{
+				intersection = i;
+			}
+		}
+		
+		return intersection;
 	}
 
 	void LayCable(int x, int y, char v)
@@ -39,6 +58,7 @@ class Space
 		if (ySpace.TryGetValue(x, out var c))
 		{
 			v = 'X';
+			intersections.Add((x, y, x + y));
 		}
 		
 		space[y][x] = v;
