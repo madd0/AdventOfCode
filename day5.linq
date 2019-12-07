@@ -8,6 +8,7 @@ void Main()
 	
 	var data = new []
 	{
+		"1002,4,3,4,33",
 		"1,0,0,0,99",
 		"2,3,0,3,99",
 		"2,4,4,5,99,0",
@@ -17,25 +18,7 @@ void Main()
 	foreach (var element in data)
 	{
 		Run(Parse(element));
-	}
-	
-	for (var noun = 0; noun < 100; noun++)
-	{
-		for (var verb = 0; verb < 100; verb++)
-		{
-			var challengeData = Parse(text);
-			challengeData[1] = noun;
-			challengeData[2] = verb;
-			
-			var result = Execute(challengeData);
-			
-			if (result == 19690720)
-			{
-				$"Noun: {noun}, Verb: {verb}, Result: {100 * noun + verb}".Dump();
-			}
-		}
-	}
-	
+	}	
 }
 
 void Run(int[] memory) 
@@ -55,29 +38,98 @@ int Execute(int[] memory)
 	
 	do
 	{
-		var instruction = memory[start];
+		var instruction = Instruction.MakeInstruction(memory, start);
 		
-		if (instruction == 99)
-		{
-			break;
-		}
-		
-		Func<int, int, int> operation;
-
-		if (instruction == 1)
-		{
-			operation = (a, b) => a + b;
-		}
-		else
-		{
-			operation = (a, b) => a * b;
-		}
-		
-		memory[memory[start + 3]] = operation(memory[memory[start + 1]], memory[memory[start + 2]]);
-		
-		start += 4;
+		start = instruction.Execute();
 	}
-	while (start + 4 < memory.Length);
+	while (start < memory.Length);
 	
 	return memory[0];
+}
+
+class Instruction
+{
+	public static Instruction Exit { get; } = new Instruction { Opcode = 99 };
+	
+	private static readonly Dictionary<int, int> instructionParameters = new Dictionary<int, int>
+	{
+		[1] = 3,
+		[2] = 3,
+		[3] = 1,
+		[4] = 1,
+		[99] = 0
+	};
+
+	public int Opcode { get; private set; }
+	
+	public int[] Memory { get; private set; }
+	
+	public int Address { get; private set; }
+	
+	public int[] Parameters { get; private set; }
+
+	public int ParameterCount => instructionParameters[Opcode];
+
+	public Action Operation
+	{
+		get
+		{
+			switch (Opcode)
+			{
+				case 1:
+					return () => Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] + Memory[this.GetParamAddress(1)];
+				case 2:
+					return () => Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] * Memory[this.GetParamAddress(1)];
+				default:
+					return () => { };
+			}
+		}
+	}
+	
+	int GetParamAddress(int paramNumber)
+	{
+		var paramAddress = this.Address + paramNumber + 1;
+		
+		if (this.Parameters[paramNumber] == 0) {
+			return this.Memory[paramAddress];
+		}
+		else {
+			return paramAddress;
+		}
+	}
+
+	public int Execute()
+	{
+		if (this.Opcode == 99)
+		{
+			return this.Memory.Length;
+		}
+		
+		this.Operation();
+		
+		return Address + ParameterCount + 1;
+	}
+	
+	public static Instruction MakeInstruction(int[] memory, int address)
+	{
+		var opCode = memory[address] % 100;
+
+		var instruction = new Instruction
+		{
+			Opcode = opCode,
+			Memory = memory,
+			Address = address,
+			Parameters = new int[instructionParameters[opCode]]
+		};
+		
+		var modes = memory[address] / 100;
+		
+		for (int i = 0; modes > 0; i++)
+		{
+			instruction.Parameters[i] = modes % 10;
+			modes = modes / 10;
+		}
+		
+		return instruction;
+	}
 }
