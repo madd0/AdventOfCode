@@ -25,13 +25,18 @@ bool IsMatch(int i)
 	var isIncreasing = true;
 	var hasDouble = false;
 	
+	var digitCount = new byte[10];
+	
+	digitCount[digits[0]]++;
+	
 	for (int pos = 1; pos < digits.Length; pos++) 
 	{
 		hasDouble |= digits[pos] == digits[pos - 1];
 		isIncreasing &= digits[pos] >= digits[pos - 1];
+		digitCount[digits[pos]]++;
 	}
 	
-	return isIncreasing && hasDouble;
+	return isIncreasing && hasDouble && digitCount.Any(c => c == 2);
 }
 
 byte[] GetDigits(int i)
