@@ -19,10 +19,23 @@ void Main()
 		Run(Parse(element));
 	}
 	
-	var challengeData = Parse(text);
-	challengeData[1] = 12;
-	challengeData[2] = 2;
-	Run(challengeData);
+	for (var noun = 0; noun < 100; noun++)
+	{
+		for (var verb = 0; verb < 100; verb++)
+		{
+			var challengeData = Parse(text);
+			challengeData[1] = noun;
+			challengeData[2] = verb;
+			
+			var result = Execute(challengeData);
+			
+			if (result == 19690720)
+			{
+				$"Noun: {noun}, Verb: {verb}, Result: {100 * noun + verb}".Dump();
+			}
+		}
+	}
+	
 }
 
 void Run(int[] memory) 
