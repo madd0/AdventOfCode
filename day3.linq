@@ -2,34 +2,39 @@
 
 void Main()
 {
+	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
+	
 	var space = new Space();
-	
-	
-	var wire1 = "U7,R6,D4,L4".Split(',');
-	var wire2 = "R8,U5,L5,D3".Split(',');
+
+	var challengeData = File.ReadAllLines(Path.Combine(dir, "day3.txt"));
+
+	var wire1 = challengeData[0].Split(',');
+	var wire2 = challengeData[1].Split(',');
+//	var wire1 = "R75,D30,R83,U83,L12,D49,R71,U7,L72".Split(',');
+//	var wire2 = "U62,R66,U55,R34,D71,R55,D58,R83".Split(',');
 
 	space.LayCable(wire1);
-
-	space.Draw();
 	space.LayCable(wire2);
 
-	space.Draw();
+	//File.WriteAllText(Path.Combine(dir, "map.txt"), space.Draw().Dump());
 	
 	space.ClosestIntersection().Dump();
 }
 
 class Space
 {
-	Dictionary<int, Dictionary<int, char>> space = new Dictionary<int, Dictionary<int, char>>();
+	Dictionary<int, Dictionary<int, (char, int)>> space = new Dictionary<int, Dictionary<int, (char, int)>>();
 
 	(int min, int max) xSpaceBounds = (0, 0);
 	(int min, int max) ySpaceBounds = (0, 0);
 	
 	List<(int,int,int)> intersections = new List<(int,int,int)>();
 	
+	int currentCable = 0;
+	
 	public Space()
 	{
-		LayCable(0, 0, 'o');
+		LayCable(0, 0, 'o', 0);
 	}
 	
 	public (int, int, int) ClosestIntersection()
@@ -47,21 +52,23 @@ class Space
 		return intersection;
 	}
 
-	void LayCable(int x, int y, char v)
+	void LayCable(int x, int y, char v, int id)
 	{
 		if (!space.TryGetValue(y, out var ySpace))
 		{
-			ySpace = new Dictionary<int, char>();
+			ySpace = new Dictionary<int, (char, int)>();
 			space.Add(y, ySpace);
 		}
 		
 		if (ySpace.TryGetValue(x, out var c))
 		{
-			v = 'X';
-			intersections.Add((x, y, x + y));
+			v = c.Item2 == id ? '+' : 'X';
+			
+			if (c.Item2 != id)
+				intersections.Add((x, y, Math.Abs(x) + Math.Abs(y)));
 		}
 		
-		space[y][x] = v;
+		space[y][x] = (v, id);
 		
 		xSpaceBounds.min = Math.Min(xSpaceBounds.min, x);
 		xSpaceBounds.max = Math.Max(xSpaceBounds.max, x);
@@ -72,6 +79,7 @@ class Space
 	public void LayCable(string[] wire)
 	{
 		var currPos = new[] { 0, 0 };
+		var cableId = currentCable++;
 		
 		foreach (var element in wire)
 		{
@@ -90,12 +98,12 @@ class Space
 					c = '+';
 				}
 				
-				LayCable(currPos[0], currPos[1], c);
+				LayCable(currPos[0], currPos[1], c, cableId);
 			}
 		}
 	}
 
-	public void Draw()
+	public string Draw()
 	{
 		var drawing = new StringBuilder();
 		
@@ -103,19 +111,24 @@ class Space
 		{
 			for (var col = xSpaceBounds.min - 1; col <= xSpaceBounds.max + 1; col++)
 			{
-				var c = '.';
+				char c;
 				
 				if (space.TryGetValue(row, out var xSpace) &&
-				    !xSpace.TryGetValue(col, out c))
+				    xSpace.TryGetValue(col, out var box))
 				{
-					c = '.';
+					c = box.Item1;
 				}
+				else
+				{
+					c = ' ';
+				}
+				
 				drawing.Append(c);
 			}
 			
 			drawing.AppendLine();
 		}
 
-		drawing.ToString().Dump();
+		return drawing.ToString();
 	}
 }
