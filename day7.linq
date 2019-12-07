@@ -7,8 +7,7 @@ async Task Main()
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day7.txt");
 	var text = "3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0"; //File.ReadAllText(file);
-	text = "3,23,3,24,1002,24,10,24,1002,23,-1,23,101,5,23,23,1,24,23,23,4,23,99,0,0";
-	
+
 	var maxSignal = int.MinValue;
 	var sequence = string.Empty;
 
@@ -66,9 +65,9 @@ async Task Main()
 class Program
 {
 	private int position;
-	
+
 	private int[] Memory { get; set; }
-	
+
 	public int Output { get; private set; }
 
 	public static Program Parse(string memory)
@@ -87,17 +86,26 @@ class Program
 		var memoryPosition = Execute(Memory, buffers);
 
 		this.Output = buffers[buffers.Length - 1];
-		
+
 		return memoryPosition == Memory.Length;
 	}
 
 	int Execute(int[] memory, int[] buffers)
 	{
+		var breakRequested = false;
+		
 		do
 		{
 			var instruction = Instruction.MakeInstruction(memory, position);
 
+			if (breakRequested && instruction.Opcode != 99)
+			{
+				break;
+			}
+
 			position = instruction.Execute(buffers);
+			
+			breakRequested = instruction.Exit;
 		}
 		while (position < memory.Length);
 
@@ -137,7 +145,7 @@ class Amplifier
 		{
 			tcs.SetResult(program.Output);
 		}
-		
+
 		if (this.next != null)
 		{
 			this.next.Run(program.Output);
@@ -147,7 +155,7 @@ class Amplifier
 
 class Instruction
 {
-	public static Instruction Exit { get; } = new Instruction { Opcode = 99 };
+	public bool Exit { get; private set; }
 
 	private static readonly Dictionary<int, int> instructionParameters = new Dictionary<int, int>
 	{
@@ -187,7 +195,7 @@ class Instruction
 				case 3:
 					return (buffers) => { Memory[this.GetParamAddress(0)] = buffers[++buffers[0]]; return next; };
 				case 4:
-					return (buffers) => { buffers[buffers.Length - 1] = Memory[this.GetParamAddress(0)]; return next; };
+					return (buffers) => { buffers[buffers.Length - 1] = Memory[this.GetParamAddress(0)]; this.Exit = true; return next; };
 				case 5:
 					return (buffers) => Memory[this.GetParamAddress(0)] != 0 ? Memory[this.GetParamAddress(1)] : next;
 				case 6:
