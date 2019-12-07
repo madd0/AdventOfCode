@@ -1,6 +1,8 @@
-<Query Kind="Program" />
+<Query Kind="Program">
+  <Namespace>System.Threading.Tasks</Namespace>
+</Query>
 
-void Main()
+async Task Main()
 {
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day7.txt");
@@ -11,7 +13,7 @@ void Main()
 
 	int maxRange = 4;
 	int minRange = 0;
-	
+
 	for (int tenks = maxRange; tenks >= minRange; tenks--)
 	{
 		for (int ks = maxRange; ks >= minRange; ks--)
@@ -29,19 +31,21 @@ void Main()
 					for (int us = maxRange; us >= minRange; us--)
 					{
 						if (us == tenks || us == ks || us == hs || us == ts) continue;
-												
-						var buffers = new[] { 0, 0, 0, 0 };
-						buffers[1] = tenks;
-						buffers[2] = Run(Parse(text), buffers);
-						buffers[1] = ks;
-						buffers[2] = Run(Parse(text), buffers);
-						buffers[1] = hs;
-						buffers[2] = Run(Parse(text), buffers);
-						buffers[1] = ts;
-						buffers[2] = Run(Parse(text), buffers);
-						buffers[1] = us;
-						var signal = Run(Parse(text), buffers);
-												
+
+						var ampA = new Amplifier(Program.Parse(text), tenks);
+						var ampB = new Amplifier(Program.Parse(text), ks);
+						var ampC = new Amplifier(Program.Parse(text), hs);
+						var ampD = new Amplifier(Program.Parse(text), ts);
+						var ampE = new Amplifier(Program.Parse(text), us);
+
+						ampA.Link(ampB);
+						ampB.Link(ampC);
+						ampC.Link(ampD);
+						ampD.Link(ampE);
+
+						ampA.Run(0);
+						var signal = await ampE.Output();
+
 						if (signal > maxSignal)
 						{
 							maxSignal = signal;
@@ -52,39 +56,86 @@ void Main()
 			}
 		}
 	}
-	
+
 	maxSignal.Dump("Signal");
 	sequence.Dump("Sequence");
 }
 
-int Run(int[] memory, int[] buffers)
+class Program
 {
-	buffers[0] = 0;
-	buffers[buffers.Length - 1] = 0;
-	
-	var result = Execute(memory, buffers);
+	private int[] Memory { get; set; }
 
-	return buffers[buffers.Length - 1];
-}
-
-int[] Parse(string memory)
-{
-	return memory.Split(',').Select(int.Parse).ToArray();
-}
-
-int Execute(int[] memory, int[] buffers)
-{
-	var start = 0;
-
-	do
+	public static Program Parse(string memory)
 	{
-		var instruction = Instruction.MakeInstruction(memory, start);
+		var p = new Program();
+		p.Memory = memory.Split(',').Select(int.Parse).ToArray();
 
-		start = instruction.Execute(buffers);
+		return p;
 	}
-	while (start < memory.Length);
 
-	return memory[0];
+	public int Run(int[] buffers)
+	{
+		buffers[0] = 0;
+		buffers[buffers.Length - 1] = 0;
+
+		Execute(Memory, buffers);
+
+		return buffers[buffers.Length - 1];
+	}
+
+	int Execute(int[] memory, int[] buffers)
+	{
+		var start = 0;
+
+		do
+		{
+			var instruction = Instruction.MakeInstruction(memory, start);
+
+			start = instruction.Execute(buffers);
+		}
+		while (start < memory.Length);
+
+		return memory[0];
+	}
+}
+
+class Amplifier
+{
+	private readonly Program program;
+	private readonly int phase;
+	private readonly TaskCompletionSource<int> tcs;
+	private Amplifier next;
+
+	public Amplifier(Program program, int phase)
+	{
+		this.program = program;
+		this.phase = phase;
+		this.tcs = new TaskCompletionSource<int>();
+	}
+
+	public void Link(Amplifier next)
+	{
+		this.next = next;
+	}
+
+	public Task<int> Output()
+	{
+		return tcs.Task;
+	}
+
+	public void Run(int signal)
+	{
+		var programResult = program.Run(new[] { 0, phase, signal, 0 });
+
+		if (this.next != null)
+		{
+			this.next.Run(programResult);
+		}
+		else
+		{
+			tcs.SetResult(programResult);
+		}
+	}
 }
 
 class Instruction
