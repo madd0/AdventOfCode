@@ -36,7 +36,7 @@ class Point
 	public int Row { get; set; }
 	public int Col { get; set; }
 	public int Distance => Math.Abs(Row) + Math.Abs(Col);
-	public HashSet<int> Wires {get; private set;} = new HashSet<int>();
+	public Dictionary<int,int> Wires {get; private set;} = new Dictionary<int,int>();
 	
 	public bool AddWire(int id)
 	{
