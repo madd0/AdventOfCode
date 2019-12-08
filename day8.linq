@@ -101,11 +101,12 @@ class Image
 		{
 			var color = 2;
 			
-			for (int layer = this.Layers.Length - 1; layer > 0; layer--)
+			foreach (var layer in this.Layers)
 			{
-				if (this.Layers[layer][pixel] != 2)
+				if (layer[pixel] != 2)
 				{
-					color = this.Layers[layer][pixel];
+					color = layer[pixel];
+					break;
 				}
 			}
 			
