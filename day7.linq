@@ -6,13 +6,13 @@ async Task Main()
 {
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day7.txt");
-	var text = "3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0"; //File.ReadAllText(file);
+	var text = File.ReadAllText(file);
 
 	var maxSignal = int.MinValue;
 	var sequence = string.Empty;
 
-	int maxRange = 4;
-	int minRange = 0;
+	int maxRange = 9;
+	int minRange = 5;
 
 	for (int tenks = maxRange; tenks >= minRange; tenks--)
 	{
@@ -32,17 +32,17 @@ async Task Main()
 					{
 						if (us == tenks || us == ks || us == hs || us == ts) continue;
 
-						var ampA = new Amplifier(Program.Parse(text), tenks);
-						var ampB = new Amplifier(Program.Parse(text), ks);
-						var ampC = new Amplifier(Program.Parse(text), hs);
-						var ampD = new Amplifier(Program.Parse(text), ts);
-						var ampE = new Amplifier(Program.Parse(text), us);
+						var ampA = new Amplifier(Program.Parse(text), tenks, 'A');
+						var ampB = new Amplifier(Program.Parse(text), ks, 'B');
+						var ampC = new Amplifier(Program.Parse(text), hs, 'C');
+						var ampD = new Amplifier(Program.Parse(text), ts, 'D');
+						var ampE = new Amplifier(Program.Parse(text), us, 'E');
 
 						ampA.Link(ampB);
 						ampB.Link(ampC);
 						ampC.Link(ampD);
 						ampD.Link(ampE);
-						//ampE.Link(ampA);
+						ampE.Link(ampA);
 
 						ampA.Run(0);
 						var signal = await ampE.Output();
@@ -68,7 +68,7 @@ class Program
 
 	private int[] Memory { get; set; }
 
-	public int Output { get; private set; }
+	public IO IO { get; private set; } = new IO();
 
 	public static Program Parse(string memory)
 	{
@@ -78,23 +78,18 @@ class Program
 		return p;
 	}
 
-	public bool Run(int[] buffers)
+	public bool Run()
 	{
-		buffers[0] = 0;
-		buffers[buffers.Length - 1] = 0;
-
-		var memoryPosition = Execute(Memory, buffers);
-
-		this.Output = buffers[buffers.Length - 1];
+		var memoryPosition = Execute(Memory);
 
 		return memoryPosition == Memory.Length;
 	}
 
-	int Execute(int[] memory, int[] buffers)
+	int Execute(int[] memory)
 	{
 		var breakRequested = false;
 		
-		do
+		while (position < memory.Length)
 		{
 			var instruction = Instruction.MakeInstruction(memory, position);
 
@@ -103,11 +98,10 @@ class Program
 				break;
 			}
 
-			position = instruction.Execute(buffers);
+			position = instruction.Execute(IO);
 			
 			breakRequested = instruction.Exit;
 		}
-		while (position < memory.Length);
 
 		return position;
 	}
@@ -118,12 +112,15 @@ class Amplifier
 	private readonly Program program;
 	private readonly int phase;
 	private readonly TaskCompletionSource<int> tcs;
+	private readonly char name;
 	private Amplifier next;
 
-	public Amplifier(Program program, int phase)
+	public Amplifier(Program program, int phase, char name)
 	{
 		this.program = program;
+		this.program.IO.Input.Enqueue(phase);
 		this.phase = phase;
+		this.name = name;
 		this.tcs = new TaskCompletionSource<int>();
 	}
 
@@ -139,18 +136,30 @@ class Amplifier
 
 	public void Run(int signal)
 	{
-		var ranToEnd = program.Run(new[] { 0, phase, signal, 0 });
+		program.IO.Input.Enqueue(signal);
+		var ranToEnd = program.Run();
 
+		//$"{name}: {program.IO.Output}".Dump();
+		
 		if (ranToEnd)
 		{
-			tcs.SetResult(program.Output);
+			if (!tcs.TrySetResult(program.IO.Output))
+			{
+				return;
+			}
 		}
 
 		if (this.next != null)
 		{
-			this.next.Run(program.Output);
+			this.next.Run(program.IO.Output);
 		}
 	}
+}
+
+class IO
+{
+	public Queue<int> Input { get; private set; } = new Queue<int>();
+	public int Output { get; set; }
 }
 
 class Instruction
@@ -180,7 +189,7 @@ class Instruction
 
 	public int ParameterCount => instructionParameters[Opcode];
 
-	public Func<int[], int> Operation
+	public Func<IO, int> Operation
 	{
 		get
 		{
@@ -193,9 +202,9 @@ class Instruction
 				case 2:
 					return (buffers) => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] * Memory[this.GetParamAddress(1)]; return next; };
 				case 3:
-					return (buffers) => { Memory[this.GetParamAddress(0)] = buffers[++buffers[0]]; return next; };
+					return (buffers) => { Memory[this.GetParamAddress(0)] = buffers.Input.Dequeue(); return next; };
 				case 4:
-					return (buffers) => { buffers[buffers.Length - 1] = Memory[this.GetParamAddress(0)]; this.Exit = true; return next; };
+					return (buffers) => { buffers.Output = Memory[this.GetParamAddress(0)]; this.Exit = true; return next; };
 				case 5:
 					return (buffers) => Memory[this.GetParamAddress(0)] != 0 ? Memory[this.GetParamAddress(1)] : next;
 				case 6:
@@ -224,14 +233,14 @@ class Instruction
 		}
 	}
 
-	public int Execute(int[] buffers)
+	public int Execute(IO io)
 	{
 		if (this.Opcode == 99)
 		{
 			return this.Memory.Length;
 		}
 
-		return this.Operation(buffers);
+		return this.Operation(io);
 	}
 
 	public static Instruction MakeInstruction(int[] memory, int address)
