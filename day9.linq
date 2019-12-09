@@ -7,7 +7,7 @@ void Main()
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day9.txt");
 	var text = File.ReadAllText(file);
-	text = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
+	//text = "1102,34463338,34463338,63,99";
 	var program = Program.Parse(text);
 	program.IO = new StdIo();
 	
@@ -172,7 +172,7 @@ class Instruction
 				case 8:
 					return (buffers) => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] == Memory[this.GetParamAddress(1)] ? 1 : 0; return next; };
 				case 9:
-					return (buffers) => { this.Address.BaseAddress += this.GetParamAddress(0); return next; };
+					return (buffers) => { this.Address.BaseAddress += (int)this.Memory[this.GetParamAddress(0)]; return next; };
 				default:
 					return (buffers) => next;
 			}
