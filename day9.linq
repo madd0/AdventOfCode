@@ -18,32 +18,32 @@ class Program
 {
 	private readonly MemoryAddress position = new MemoryAddress();
 
-	private int[] Memory { get; set; }
+	private Memory Memory { get; set; }
 
 	public IO IO { get; set; } = new IO();
 
 	public static Program Parse(string memory)
 	{
 		var p = new Program();
-		p.Memory = memory.Split(',').Select(int.Parse).ToArray();
+		p.Memory = new Memory(memory.Split(',').Select(long.Parse));
 
 		return p;
 	}
 
 	public bool Run()
 	{
-		Execute(Memory);
+		Execute();
 
 		return position.Position == Memory.Length;
 	}
 
-	void Execute(int[] memory)
+	void Execute()
 	{
 		var breakRequested = false;
 		
-		while (position.Position < memory.Length)
+		while (position.Position < this.Memory.Length)
 		{
-			var instruction = Instruction.MakeInstruction(memory, position);
+			var instruction = Instruction.MakeInstruction(this.Memory, position);
 
 			if (breakRequested && instruction.Opcode != 99)
 			{
@@ -53,6 +53,41 @@ class Program
 			instruction.Execute(IO);
 			
 			breakRequested = instruction.Exit;
+		}
+	}
+}
+
+class Memory
+{
+	private Dictionary<int, long> memory;
+
+	public Memory(IEnumerable<long> enumerable)
+	{
+		this.memory = enumerable.Select((v, i) => new { Index = i, Value = v }).ToDictionary(e => e.Index, e => e.Value);
+	}
+
+	public long this[int position]
+	{
+		get 
+		{
+			if (!this.memory.TryGetValue(position, out var result))
+			{
+				this.memory[position] = result = 0;
+			}
+			
+			return result;
+		}
+		set
+		{
+			this.memory[position] = value;
+		}
+	}
+
+	public int Length
+	{
+		get
+		{
+			return this.memory.Keys.Max();
 		}
 	}
 }
@@ -69,13 +104,13 @@ class StdIo : IO
 		}
 	}
 
-	public override int Output { get => base.Output; set => Console.WriteLine(base.Output = value); }
+	public override long Output { get => base.Output; set => Console.WriteLine(base.Output = value); }
 }
 
 class IO
 {
 	public virtual Queue<int> Input { get; private set; } = new Queue<int>();
-	public virtual int Output { get; set; }
+	public virtual long Output { get; set; }
 }
 
 class MemoryAddress
@@ -104,7 +139,7 @@ class Instruction
 
 	public int Opcode { get; private set; }
 
-	public int[] Memory { get; private set; }
+	public Memory Memory { get; private set; }
 
 	public MemoryAddress Address { get; private set; }
 
@@ -127,11 +162,11 @@ class Instruction
 				case 3:
 					return (buffers) => { Memory[this.GetParamAddress(0)] = buffers.Input.Dequeue(); return next; };
 				case 4:
-					return (buffers) => { buffers.Output = Memory[this.GetParamAddress(0)]; this.Exit = true; return next; };
+					return (buffers) => { buffers.Output = Memory[this.GetParamAddress(0)]; this.Exit = false; return next; };
 				case 5:
-					return (buffers) => Memory[this.GetParamAddress(0)] != 0 ? Memory[this.GetParamAddress(1)] : next;
+					return (buffers) => Memory[this.GetParamAddress(0)] != 0 ? (int)Memory[this.GetParamAddress(1)] : next;
 				case 6:
-					return (buffers) => Memory[this.GetParamAddress(0)] == 0 ? Memory[this.GetParamAddress(1)] : next;
+					return (buffers) => Memory[this.GetParamAddress(0)] == 0 ? (int)Memory[this.GetParamAddress(1)] : next;
 				case 7:
 					return (buffers) => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] < Memory[this.GetParamAddress(1)] ? 1 : 0; return next; };
 				case 8:
@@ -150,7 +185,11 @@ class Instruction
 
 		if (this.Parameters[paramNumber] == 0)
 		{
-			return this.Memory[paramAddress];
+			return (int)this.Memory[paramAddress];
+		}
+		else if (this.Parameters[paramNumber] == 2)
+		{
+			return this.Address.BaseAddress + (int)this.Memory[paramAddress];
 		}
 		else
 		{
@@ -168,9 +207,9 @@ class Instruction
 		this.Address.Position = this.Operation(io);
 	}
 
-	public static Instruction MakeInstruction(int[] memory, MemoryAddress address)
+	public static Instruction MakeInstruction(Memory memory, MemoryAddress address)
 	{
-		var opCode = memory[address.Position] % 100;
+		var opCode = (int)(memory[address.Position] % 100);
 
 		var instruction = new Instruction
 		{
@@ -180,7 +219,7 @@ class Instruction
 			Parameters = new int[instructionParameters[opCode]]
 		};
 
-		var modes = memory[address.Position] / 100;
+		var modes = (int)(memory[address.Position] / 100);
 
 		for (int i = 0; modes > 0; i++)
 		{
