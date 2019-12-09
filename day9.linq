@@ -7,7 +7,7 @@ void Main()
 	var dir = Path.GetDirectoryName(Util.CurrentQueryPath);
 	var file = Path.Combine(dir, ".\\day9.txt");
 	var text = File.ReadAllText(file);
-
+	text = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
 	var program = Program.Parse(text);
 	program.IO = new StdIo();
 	
@@ -16,7 +16,7 @@ void Main()
 
 class Program
 {
-	private int position;
+	private readonly MemoryAddress position = new MemoryAddress();
 
 	private int[] Memory { get; set; }
 
@@ -32,16 +32,16 @@ class Program
 
 	public bool Run()
 	{
-		var memoryPosition = Execute(Memory);
+		Execute(Memory);
 
-		return memoryPosition == Memory.Length;
+		return position.Position == Memory.Length;
 	}
 
-	int Execute(int[] memory)
+	void Execute(int[] memory)
 	{
 		var breakRequested = false;
 		
-		while (position < memory.Length)
+		while (position.Position < memory.Length)
 		{
 			var instruction = Instruction.MakeInstruction(memory, position);
 
@@ -50,12 +50,10 @@ class Program
 				break;
 			}
 
-			position = instruction.Execute(IO);
+			instruction.Execute(IO);
 			
 			breakRequested = instruction.Exit;
 		}
-
-		return position;
 	}
 }
 
@@ -80,6 +78,12 @@ class IO
 	public virtual int Output { get; set; }
 }
 
+class MemoryAddress
+{
+	public int Position { get; set; }
+	public int BaseAddress { get; set; }
+}
+
 class Instruction
 {
 	public bool Exit { get; private set; }
@@ -94,6 +98,7 @@ class Instruction
 		[6] = 2,
 		[7] = 3,
 		[8] = 3,
+		[9] = 1,
 		[99] = 0
 	};
 
@@ -101,7 +106,7 @@ class Instruction
 
 	public int[] Memory { get; private set; }
 
-	public int Address { get; private set; }
+	public MemoryAddress Address { get; private set; }
 
 	public int[] Parameters { get; private set; }
 
@@ -111,7 +116,7 @@ class Instruction
 	{
 		get
 		{
-			var next = Address + ParameterCount + 1;
+			var next = Address.Position + ParameterCount + 1;
 
 			switch (Opcode)
 			{
@@ -131,6 +136,8 @@ class Instruction
 					return (buffers) => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] < Memory[this.GetParamAddress(1)] ? 1 : 0; return next; };
 				case 8:
 					return (buffers) => { Memory[this.GetParamAddress(2)] = Memory[this.GetParamAddress(0)] == Memory[this.GetParamAddress(1)] ? 1 : 0; return next; };
+				case 9:
+					return (buffers) => { this.Address.BaseAddress += this.GetParamAddress(0); return next; };
 				default:
 					return (buffers) => next;
 			}
@@ -139,7 +146,7 @@ class Instruction
 
 	int GetParamAddress(int paramNumber)
 	{
-		var paramAddress = this.Address + paramNumber + 1;
+		var paramAddress = this.Address.Position + paramNumber + 1;
 
 		if (this.Parameters[paramNumber] == 0)
 		{
@@ -151,19 +158,19 @@ class Instruction
 		}
 	}
 
-	public int Execute(IO io)
+	public void Execute(IO io)
 	{
 		if (this.Opcode == 99)
 		{
-			return this.Memory.Length;
+			this.Address.Position = this.Memory.Length;
 		}
 
-		return this.Operation(io);
+		this.Address.Position = this.Operation(io);
 	}
 
-	public static Instruction MakeInstruction(int[] memory, int address)
+	public static Instruction MakeInstruction(int[] memory, MemoryAddress address)
 	{
-		var opCode = memory[address] % 100;
+		var opCode = memory[address.Position] % 100;
 
 		var instruction = new Instruction
 		{
@@ -173,7 +180,7 @@ class Instruction
 			Parameters = new int[instructionParameters[opCode]]
 		};
 
-		var modes = memory[address] / 100;
+		var modes = memory[address.Position] / 100;
 
 		for (int i = 0; modes > 0; i++)
 		{
