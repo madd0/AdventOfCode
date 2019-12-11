@@ -95,43 +95,34 @@ class NeighborMap : Map<int>
 					continue;
 				}
 				
-				var neighborCount = VerticalNeighbors(map, row, col);
-
-				neighborCounts[row][col] = neighborCount;
-
-				if (neighborCount > result.Max)
-				{
-					result.Max = neighborCount;
-				}
+				result.CountNeighbors(map, row, col);
 			}
 		}
 
 		return result;
 	}
+	
+	private void CountNeighbors(SpaceMap map, int row, int col)
+	{
+		this.CountVerticalNeighbors(map, row, col);
 
-	private static int VerticalNeighbors(SpaceMap map, int row, int col)
-	{		
-		var neighborCount = 0;
-
-		for (int i = row - 1; i >= 0; i--)
+		if (this.Space[row][col] > this.Max)
 		{
-			if (map.Space[i][col].IsAsteroid())
-			{
-				neighborCount++;
-				break;
-			}
+			this.Max = this.Space[row][col];
 		}
+	}
 
+	private void CountVerticalNeighbors(SpaceMap map, int row, int col)
+	{
 		for (int i = row + 1; i < map.Height; i++)
 		{
 			if (map.Space[i][col].IsAsteroid())
 			{
-				neighborCount++;
+				this.Space[row][col]++;
+				this.Space[i][col]++;
 				break;
 			}
 		}
-
-		return neighborCount;
 	}
 
 }
