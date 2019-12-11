@@ -13,9 +13,9 @@ void Main()
 ...##");
 
 	var map = SpaceMap.Parse(text).Dump();
-	
+
 	var neighbors = NeighborMap.MakeNeighborMap(map).Dump();
-	neighbors.Max.Dump("Max");
+	$"{neighbors.MaxCol},{neighbors.MaxRow}: {neighbors.Max}".Dump("Max");
 }
 
 class SpaceMap : Map<char>
@@ -75,6 +75,10 @@ class NeighborMap : Map<int>
 {
 	public int Max { get; private set; }
 	
+	public int MaxRow { get; private set; }
+	
+	public int MaxCol { get; private set; }
+	
 	public static NeighborMap MakeNeighborMap(SpaceMap map)
 	{
 		var result = new NeighborMap();
@@ -109,6 +113,8 @@ class NeighborMap : Map<int>
 		if (this.Space[row][col] > this.Max)
 		{
 			this.Max = this.Space[row][col];
+			this.MaxRow = row;
+			this.MaxCol = col;
 		}
 	}
 
