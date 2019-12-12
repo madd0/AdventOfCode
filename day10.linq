@@ -105,16 +105,62 @@ class NeighborMap : Map<int>
 
 		return result;
 	}
-	
+
 	private void CountNeighbors(SpaceMap map, int row, int col)
 	{
 		this.CountVerticalNeighbors(map, row, col);
+		this.CountHorizontalNeighbors(map, row, col);
+		this.CountOtherNeighbors(map, row, col);
 
 		if (this.Space[row][col] > this.Max)
 		{
 			this.Max = this.Space[row][col];
 			this.MaxRow = row;
 			this.MaxCol = col;
+		}
+	}
+	
+	private void CountOtherNeighbors(SpaceMap map, int row, int col)
+	{
+		for (int candidateRow = map.Height - 1; candidateRow > row; candidateRow--)
+		{
+			var startCol = candidateRow == row ? col + 1 : 0;
+			
+			for (int candidateCol = startCol; candidateCol < map.Width; candidateCol++)
+			{
+				if (candidateCol == col || map.Space[candidateRow][candidateCol].IsEmpty())
+				{
+					continue;
+				}
+				
+				var slope = (double)(candidateRow - row) / (double)(candidateCol - col);
+				var origin = row - slope * col;
+				Func<int, double> line = (int x) => x * slope + origin;
+
+				var intercepted = false;
+				
+				var interceptorStart = Math.Min(candidateCol + 1, col + 1);
+				var interceptorEnd = Math.Max(candidateCol, col);
+				for (var interceptorCol = interceptorStart; interceptorCol < map.Width && interceptorCol < interceptorEnd; interceptorCol++)
+				{
+					var interceptorRow = line(interceptorCol);
+
+					if (interceptorRow.IsInteger() &&
+					    interceptorRow >= 0 && 
+						interceptorRow < map.Height &&
+						map.Space[(int)interceptorRow][interceptorCol].IsAsteroid())
+					{
+						intercepted = true;
+						break;
+					}
+				}
+				
+				if (!intercepted)
+				{
+					this.Space[row][col]++;
+					this.Space[candidateRow][candidateCol]++;
+				}
+			}
 		}
 	}
 
@@ -131,17 +177,35 @@ class NeighborMap : Map<int>
 		}
 	}
 
+	private void CountHorizontalNeighbors(SpaceMap map, int row, int col)
+	{
+		for (int i = col + 1; i < map.Width; i++)
+		{
+			if (map.Space[row][i].IsAsteroid())
+			{
+				this.Space[row][col]++;
+				this.Space[row][i]++;
+				break;
+			}
+		}
+	}
+
 }
 
-public static class CharExtensions
+public static class Extensions
 {
 	public static bool IsEmpty(this char c)
 	{
 		return c == '.';
 	}
-	
+
 	public static bool IsAsteroid(this char c)
 	{
 		return c == '#';
+	}
+
+	public static bool IsInteger(this double d)
+	{
+		return Math.Abs(d % 1) <= (Double.Epsilon * 100);
 	}
 }
