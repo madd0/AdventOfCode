@@ -6,16 +6,32 @@ void Main()
 	var file = Path.Combine(dir, "day10.txt");
 	TextReader text = new StreamReader(File.OpenRead(file));
 
-	text = new StringReader(@".#..#
-.....
-#####
-....#
-...##");
+	text = new StringReader(@".#..##.###...#######
+##.############..##.
+.#.######.########.#
+.###.#######.####.#.
+#####.##.#.##.###.##
+..#####..#.#########
+####################
+#.####....###.#.#.##
+##.#################
+#####.##.###..####..
+..######..##.#######
+####.##.####...##..#
+.#####..#.######.###
+##...#.##########...
+#.##########.#######
+.####.#.###.###.#.##
+....##.##.###..#####
+.#.#.###########.###
+#.#.#.#####.####.###
+###.##.####.##.#..##");
 
 	var map = SpaceMap.Parse(text).Dump();
 
 	var neighbors = NeighborMap.MakeNeighborMap(map).Dump();
 	$"{neighbors.MaxCol},{neighbors.MaxRow}: {neighbors.Max}".Dump("Max");
+	neighbors.Graph.Select(g => g.Value.Count).Max().Dump();
 }
 
 class SpaceMap : Map<char>
@@ -50,6 +66,8 @@ class Map<T>
 	public int Height => this.Space.Length;
 
 	public T[][] Space { get; protected set; }
+	
+	public virtual string Format => "{0}";
 
 	public object ToDump()
 	{
@@ -59,7 +77,7 @@ class Map<T>
 		{
 			foreach (var element in line)
 			{
-				builder.Append(element);
+				builder.AppendFormat(this.Format, element);
 			}
 
 			builder.AppendLine();
@@ -78,7 +96,11 @@ class NeighborMap : Map<int>
 	public int MaxRow { get; private set; }
 	
 	public int MaxCol { get; private set; }
+
+	public override string Format => $"{{0:{Max}}}";
 	
+	public Dictionary<int, HashSet<int>> Graph { get; private set; } = new Dictionary<int, HashSet<int>>();
+
 	public static NeighborMap MakeNeighborMap(SpaceMap map)
 	{
 		var result = new NeighborMap();
@@ -104,6 +126,11 @@ class NeighborMap : Map<int>
 		}
 
 		return result;
+	}
+	
+	private static int GetKey(int row, int col)
+	{
+		return col * 1000 + row;
 	}
 
 	private void CountNeighbors(SpaceMap map, int row, int col)
@@ -157,6 +184,7 @@ class NeighborMap : Map<int>
 				
 				if (!intercepted)
 				{
+					this.AddNeighbor(row, col, candidateRow, candidateCol);
 					this.Space[row][col]++;
 					this.Space[candidateRow][candidateCol]++;
 				}
@@ -170,6 +198,7 @@ class NeighborMap : Map<int>
 		{
 			if (map.Space[i][col].IsAsteroid())
 			{
+				this.AddNeighbor(row, col, i, col);
 				this.Space[row][col]++;
 				this.Space[i][col]++;
 				break;
@@ -183,6 +212,7 @@ class NeighborMap : Map<int>
 		{
 			if (map.Space[row][i].IsAsteroid())
 			{
+				this.AddNeighbor(row, col, row, i);
 				this.Space[row][col]++;
 				this.Space[row][i]++;
 				break;
@@ -190,6 +220,24 @@ class NeighborMap : Map<int>
 		}
 	}
 
+	private void AddNeighbor(int row, int col, int nRow, int nCol)
+	{
+		var key = GetKey(row, col);
+		var nKey = GetKey(nRow, nCol);
+		
+		if (!this.Graph.TryGetValue(key, out var currentSet))
+		{
+			this.Graph[key] = currentSet = new HashSet<int>();
+		}
+		
+		if (!this.Graph.TryGetValue(nKey, out var neighborSet))
+		{
+			this.Graph[nKey] = neighborSet = new HashSet<int>();
+		}
+		
+		currentSet.Add(nKey);
+		neighborSet.Add(key);
+	}
 }
 
 public static class Extensions
